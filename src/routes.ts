@@ -1,13 +1,23 @@
-import express, { Request, Response } from 'express';
+import { Router, Request, Response } from 'express';
+import {cacheMiddleware, clearCache, saveToCache} from './middleware/cacheMidleware'
 import { getDB } from './database';
 import { error } from 'console';
 
-const router = express.Router();
+const router = Router();
 
-router.get('/users', async (req, res) => {
-  const db = getDB()
-  const users = await db.all('SELECT * FROM users');
-  res.json(users);
+router.get('/users', cacheMiddleware, async (req:Request, res: Response) => {
+  try {
+    const db = getDB();
+    const users = await db.all('SELECT * FROM users');
+
+    await saveToCache('users_cache', users);
+    
+    console.log('pegou do banco')
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
 });
 
 router.get('/user/:id', async (req, res) => {
@@ -39,6 +49,8 @@ router.post('/users', async (req, res):Promise<any> => {
   
     try {
       await db.run('INSERT INTO users (name) VALUES (?)', [name]);
+      await clearCache('users_cache');
+      console.log("cache deletado")
       res.status(201).json({ message: 'User added successfully' });
     } catch (error) {
       console.error('Error inserting user:', error);
