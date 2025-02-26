@@ -1,11 +1,16 @@
 import { Router, Request, Response } from 'express';
-import {cacheMiddleware, clearCache, saveToCache} from './middleware/cacheMidleware'
+import {
+  cacheMiddleware, 
+  clearCache, 
+  saveToCache, 
+  rateLimiter
+} from './middleware/cacheMidleware'
 import { getDB } from './database';
 import { error } from 'console';
 
 const router = Router();
 
-router.get('/users', cacheMiddleware, async (req:Request, res: Response) => {
+router.get('/users', rateLimiter, cacheMiddleware, async (req:Request, res: Response) => {
   try {
     const db = getDB();
     const users = await db.all('SELECT * FROM users');
